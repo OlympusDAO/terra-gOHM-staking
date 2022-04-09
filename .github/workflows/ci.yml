@@ -15,9 +15,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
+            ~/.cargo
             target
+            !target/debug/deps
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
 
       - uses: actions-rs/toolchain@v1
