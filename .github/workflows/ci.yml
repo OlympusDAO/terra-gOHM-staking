@@ -35,4 +35,7 @@ jobs:
       - uses: actions-rs/grcov@v0.1
       - name: Print Coverage
         run: |
-          cat coverage/coverage.json
+          cargo install htmlq
+          LINE_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(1) > div > p.title > abbr" --text); echo "line_coverage = $LINE_COV"
+          FUNCTION_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(2) > div > p.title > abbr" --text); echo "function_coverage = $FUNCTION_COV"
+          BRANCH_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(3) > div > p.title > abbr" --text); echo "branch_coverage = $BRANCH_COV"
