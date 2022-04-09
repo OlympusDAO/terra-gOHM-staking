@@ -1,4 +1,4 @@
-on: [push, pull_request]
+on: [ push, pull_request ]
 name: CI
 jobs:
   Coverage:
@@ -10,6 +10,15 @@ jobs:
           curl -fsSL https://deb.nodesource.com/setup_12.x | sudo -E bash -
           sudo apt-get install -y nodejs
       - uses: actions/checkout@v1
+      - name: ⚡ Cache
+        if: ${{ !env.ACT }}
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
@@ -25,4 +34,6 @@ jobs:
       - uses: actions-rs/grcov@v0.1
       - name: Print Coverage
         run: |
+          cat coverage/index.html
+          echo "\n\n---\n\n"
           cat coverage/coverage.json
