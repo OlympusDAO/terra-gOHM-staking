@@ -150,7 +150,7 @@ fn improper_initializations() -> Result<(), Box<dyn Error>> {
     for table in tables {
         let info = mock_info("addr0000", &[]);
         let res = instantiate(deps.as_mut(), mock_env(), info, table.msg);
-        if let Ok(_) = res {
+        if res.is_ok() {
             return Err(table.err.into());
         }
     }

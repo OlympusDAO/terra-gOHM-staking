@@ -1,8 +1,8 @@
 use crate::contract::{execute, instantiate, migrate, query};
-use crate::state::{read_staker_info, store_staker_info};
+
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    attr, from_binary, to_binary, Addr, CanonicalAddr, CosmosMsg, Decimal, Response, StdError,
+    attr, from_binary, to_binary, CosmosMsg, Decimal, Response, StdError,
     SubMsg, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
@@ -476,8 +476,8 @@ fn test_withdraw_remove_staker_info_on_empty_bond_amount() -> Result<(), Box<dyn
     env.block.time = env.block.time.plus_seconds(100);
     let info = mock_info("addr0000", &[]);
     let msg = ExecuteMsg::Withdraw {};
-    let res = execute(deps.as_mut(), env.clone(), info, msg);
-    if let Err(res) = res {
+    let res = execute(deps.as_mut(), env, info, msg);
+    if let Err(_res) = res {
         return Err("failed to remove staker info".into());
     }
 
