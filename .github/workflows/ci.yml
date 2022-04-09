@@ -35,6 +35,4 @@ jobs:
       - uses: actions-rs/grcov@v0.1
       - name: Print Coverage
         run: |
-#          cat coverage/index.html
-#          echo "\n\n---\n\n"
           cat coverage/coverage.json
