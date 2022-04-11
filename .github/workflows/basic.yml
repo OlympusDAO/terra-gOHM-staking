@@ -1,32 +1,25 @@
 # Based on https://github.com/actions-rs/example/blob/master/.github/workflows/quickstart.yml
 
-on: [push, pull_request]
-
-name: Basic
-
+on: [ push, pull_request ]
+name: CI
 jobs:
-  test:
-    name: Test Suite
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: 1.58.1
-          target: wasm32-unknown-unknown
+      - if: ${{ env.ACT }}
+        name: Setup to run CI locally
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+          sudo apt-get install -y nodejs
+          toolchain: nightly
           override: true
-
-      - name: Run unit tests
-        uses: actions-rs/cargo@v1
+      - uses: actions-rs/cargo@v1
+        name: Run tests
         with:
           command: test
-          args: --all
-        env:
-          RUST_BACKTRACE: 1
+          args: --all-features --no-fail-fast
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
       - uses: actions-rs/grcov@v0.1
         name: Generate coverage report
       - name: Installing htmlq - to parse coverage report
