@@ -11,6 +11,18 @@ jobs:
         run: |
           curl -fsSL https://deb.nodesource.com/setup_12.x | sudo -E bash -
           sudo apt-get install -y nodejs
+      - uses: actions/checkout@v1
+      - name: ⚡ Cache
+        if: ${{ !env.ACT }}
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo
+            target
+            !target/debug/deps
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
+      - uses: actions-rs/toolchain@v1
+        with:
           toolchain: nightly
           override: true
       - uses: actions-rs/cargo@v1
@@ -18,9 +30,12 @@ jobs:
         with:
           command: test
           args: --all-features --no-fail-fast
+        env:
+          CARGO_INCREMENTAL: '0'
           RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
           RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
       - uses: actions-rs/grcov@v0.1
+      - name: Installing htmlq
         name: Generate coverage report
       - name: Installing htmlq - to parse coverage report
         run: cargo install htmlq
