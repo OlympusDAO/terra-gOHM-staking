@@ -27,6 +27,18 @@ jobs:
           args: --all
         env:
           RUST_BACKTRACE: 1
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      - uses: actions-rs/grcov@v0.1
+        name: Generate coverage report
+      - name: Installing htmlq - to parse coverage report
+        run: cargo install htmlq
+      - name: Parse coverage report and print
+        run: |
+          LINE_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(1) > div > p.title > abbr" --text); echo "line_coverage = $LINE_COV"
+          FUNCTION_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(2) > div > p.title > abbr" --text); echo "function_coverage = $FUNCTION_COV"
+          BRANCH_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(3) > div > p.title > abbr" --text); echo "branch_coverage = $BRANCH_COV"
 
   lints:
     name: Lints
@@ -54,13 +66,3 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
-
-      - uses: actions-rs/grcov@v0.1
-        name: Generate coverage report
-      - name: Installing htmlq - to parse coverage report
-        run: cargo install htmlq
-      - name: Parse coverage report and print
-        run: |
-          LINE_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(1) > div > p.title > abbr" --text); echo "line_coverage = $LINE_COV"
-          FUNCTION_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(2) > div > p.title > abbr" --text); echo "function_coverage = $FUNCTION_COV"
-          BRANCH_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(3) > div > p.title > abbr" --text); echo "branch_coverage = $BRANCH_COV"
