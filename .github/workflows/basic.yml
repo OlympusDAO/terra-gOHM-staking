@@ -54,7 +54,11 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
-       - name: Parse coverage report and print
-          run: |
-            LINE_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(1) > div > p.title > abbr" --text); echo "line_coverage = $LINE_COV"
-            FUNCTION_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(2) > div > p.title > abbr" --text); echo "function_coverage = $FUNCTION_COV"
+      - uses: actions-rs/grcov@v0.1
+        name: Generate coverage report
+      - name: Installing htmlq - to parse coverage report
+        run: cargo install htmlq
+      - name: Parse coverage report and print
+        run: |
+          LINE_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(1) > div > p.title > abbr" --text); echo "line_coverage = $LINE_COV"
+          FUNCTION_COV=$(cat coverage/index.html | htmlq "body > div > nav.level > div:nth-child(2) > div > p.title > abbr" --text); echo "function_coverage = $FUNCTION_COV"
