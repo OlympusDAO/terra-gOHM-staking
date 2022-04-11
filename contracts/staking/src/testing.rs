@@ -1,14 +1,17 @@
-use crate::contract::{execute, instantiate, query};
+use crate::contract::{execute, instantiate, migrate, query};
+
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    attr, from_binary, to_binary, CosmosMsg, Decimal, StdError, SubMsg, Uint128, WasmMsg,
+    attr, from_binary, to_binary, CosmosMsg, Decimal, Response, StdError,
+    SubMsg, Uint128, WasmMsg,
 };
 use cw20::{Cw20ExecuteMsg, Cw20ReceiveMsg};
 use gohm_staking::staking::ExecuteMsg::UpdateConfig;
 use gohm_staking::staking::{
-    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, QueryMsg, StakerInfoResponse,
-    StateResponse,
+    ConfigResponse, Cw20HookMsg, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg,
+    StakerInfoResponse, StateResponse,
 };
+use std::error::Error;
 
 #[test]
 fn proper_initialization() {
@@ -569,6 +572,54 @@ fn test_withdraw() {
             funds: vec![],
         }))]
     );
+}
+
+#[test]
+fn test_withdraw_remove_staker_info_on_empty_bond_amount() -> Result<(), Box<dyn Error>> {
+    let mut deps = mock_dependencies(&[]);
+
+    let msg = InstantiateMsg {
+        reward_token: "reward0000".to_string(),
+        staking_token: "staking0000".to_string(),
+        distribution_schedule: vec![
+            (
+                mock_env().block.time.seconds(),
+                mock_env().block.time.seconds() + 100,
+                Uint128::from(1000000u128),
+            ),
+            (
+                mock_env().block.time.seconds() + 100,
+                mock_env().block.time.seconds() + 200,
+                Uint128::from(10000000u128),
+            ),
+        ],
+        governance: "gov0000".to_string(),
+    };
+
+    let info = mock_info("addr0000", &[]);
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg)?;
+
+    // bond 100 tokens
+    let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+        sender: "addr0000".to_string(),
+        amount: Uint128::from(0u128),
+        msg: to_binary(&Cw20HookMsg::Bond {}).unwrap(),
+    });
+    let info = mock_info("staking0000", &[]);
+    let mut env = mock_env();
+    let _res = execute(deps.as_mut(), env.clone(), info, msg)?;
+
+    // 100 seconds passed
+    // 1,000,000 rewards distributed
+    env.block.time = env.block.time.plus_seconds(100);
+    let info = mock_info("addr0000", &[]);
+    let msg = ExecuteMsg::Withdraw {};
+    let res = execute(deps.as_mut(), env, info, msg);
+    if let Err(_res) = res {
+        return Err("failed to remove staker info".into());
+    }
+
+    Ok(())
 }
 
 #[test]
@@ -1172,4 +1223,11 @@ fn test_update_config() {
         ]
     );
     assert_eq!(config.governance, "gov0001".to_string());
+}
+
+#[test]
+fn test_migrate() {
+    let mut deps = mock_dependencies(&[]);
+    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {}).unwrap();
+    assert_eq!(res, Response::default())
 }

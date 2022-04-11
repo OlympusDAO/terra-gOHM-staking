@@ -1,4 +1,4 @@
-use crate::contract::{execute, instantiate, query};
+use crate::contract::{execute, instantiate, migrate, query};
 use cosmwasm_std::testing::{
     mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage, MOCK_CONTRACT_ADDR,
 };
@@ -11,7 +11,8 @@ use cw20_legacy::{
     msg::{ExecuteMsg, QueryMsg},
     ContractError,
 };
-use gohm_staking::reward_token::InstantiateMsg;
+use gohm_staking::reward_token::{InstantiateMsg, MigrateMsg};
+use std::error::Error;
 
 #[test]
 fn proper_initialization() {
@@ -42,7 +43,7 @@ fn proper_initialization() {
             name: "gOHM reward token".to_string(),
             symbol: "rgOHM".to_string(),
             decimals: 6u8,
-            total_supply: Uint128::zero()
+            total_supply: Uint128::zero(),
         }
     );
 
@@ -55,6 +56,113 @@ fn proper_initialization() {
             cap: None,
         }
     );
+}
+
+#[test]
+fn improper_initializations() -> Result<(), Box<dyn Error>> {
+    // table driven tests
+    struct Table {
+        msg: InstantiateMsg,
+        err: String,
+    }
+    let tables = vec![
+        Table {
+            msg: InstantiateMsg {
+                name: "g".to_string(),
+                symbol: "rgOHM".to_string(),
+                decimals: 6u8,
+                minter: "minter".to_string(),
+                gohm_token: "gohm_token".to_string(),
+                denom: "uluna".to_string(),
+                gohm_rate: Decimal::percent(1000),
+                denom_rate: Decimal::percent(10),
+            },
+            err: "allowed short name, less than 3 bytes".to_string(),
+        },
+        Table {
+            msg: InstantiateMsg {
+                name: "gOHM reward token, this is a very very very very very very very very very long name"
+                    .to_string(),
+                symbol: "rgOHM".to_string(),
+                decimals: 6u8,
+                minter: "minter".to_string(),
+                gohm_token: "gohm_token".to_string(),
+                denom: "uluna".to_string(),
+                gohm_rate: Decimal::percent(1000),
+                denom_rate: Decimal::percent(10),
+            },
+            err: "allowed long name, more than 50 bytes".to_string(),
+        },
+        Table {
+            msg: InstantiateMsg {
+                name: "gOHM reward token".to_string(),
+                symbol: "r".to_string(),
+                decimals: 6u8,
+                minter: "minter".to_string(),
+                gohm_token: "gohm_token".to_string(),
+                denom: "uluna".to_string(),
+                gohm_rate: Decimal::percent(1000),
+                denom_rate: Decimal::percent(10),
+            },
+            err: "allowed short symbol, less than 3 bytes".to_string(),
+        }, Table {
+            msg: InstantiateMsg {
+                name: "gOHM reward token"
+                    .to_string(),
+                symbol: "olympusDecentralizedAutonomousOrganization".to_string(),
+                decimals: 6u8,
+                minter: "minter".to_string(),
+                gohm_token: "gohm_token".to_string(),
+                denom: "uluna".to_string(),
+                gohm_rate: Decimal::percent(1000),
+                denom_rate: Decimal::percent(10),
+            },
+            err: "allowed long symbol, more than 12 bytes".to_string(),
+        }, Table {
+            msg: InstantiateMsg {
+                name: "gOHM reward token".to_string(),
+                symbol: "rgOHM!".to_string(),
+                decimals: 6u8,
+                minter: "minter".to_string(),
+                gohm_token: "gohm_token".to_string(),
+                denom: "uluna".to_string(),
+                gohm_rate: Decimal::percent(1000),
+                denom_rate: Decimal::percent(10),
+            },
+            err: "allowed symbol with special char".to_string(),
+        },
+        Table {
+            msg: InstantiateMsg {
+                name: "gOHM reward token".to_string(),
+                symbol: "rgOHM".to_string(),
+                decimals: 20,
+                minter: "minter".to_string(),
+                gohm_token: "gohm_token".to_string(),
+                denom: "uluna".to_string(),
+                gohm_rate: Decimal::percent(1000),
+                denom_rate: Decimal::percent(10),
+            },
+            err: "allowed decimal larger than 18".to_string(),
+        },
+    ];
+
+    let mut deps = mock_dependencies(&[]);
+    for table in tables {
+        let info = mock_info("addr0000", &[]);
+        let res = instantiate(deps.as_mut(), mock_env(), info, table.msg);
+        if res.is_ok() {
+            return Err(table.err.into());
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_migrate() {
+    let mut deps = mock_dependencies(&[]);
+    let res = migrate(deps.as_mut(), mock_env(), MigrateMsg {}).unwrap();
+    assert_eq!(res, Response::default())
 }
 
 #[test]
@@ -112,7 +220,7 @@ fn test_mint_tokens_fails_if_several_denoms_received() {
 
     assert_eq!(
         res,
-        ContractError::Std(StdError::generic_err("Cannot receive several denoms",))
+        ContractError::Std(StdError::generic_err("Cannot receive several denoms"))
     );
 }
 
@@ -140,7 +248,7 @@ fn test_mint_tokens_fails_if_received_denom_is_invalid() {
 
     assert_eq!(
         res,
-        ContractError::Std(StdError::generic_err("Invalid denom amount",))
+        ContractError::Std(StdError::generic_err("Invalid denom amount"))
     );
 }
 
@@ -182,7 +290,7 @@ fn test_mint_tokens_when_all_rates_are_not_zero() {
             name: "gOHM reward token".to_string(),
             symbol: "rgOHM".to_string(),
             decimals: 6u8,
-            total_supply: amount
+            total_supply: amount,
         }
     );
 
@@ -224,7 +332,7 @@ fn test_mint_tokens_when_gohm_rate_is_zero() {
             name: "gOHM reward token".to_string(),
             symbol: "rgOHM".to_string(),
             decimals: 6u8,
-            total_supply: amount
+            total_supply: amount,
         }
     );
 
@@ -278,7 +386,7 @@ fn test_mint_tokens_when_denom_rate_is_zero() {
             name: "gOHM reward token".to_string(),
             symbol: "rgOHM".to_string(),
             decimals: 6u8,
-            total_supply: amount
+            total_supply: amount,
         }
     );
 
@@ -518,7 +626,7 @@ fn test_burn_tokens_when_all_rates_are_not_zero() {
                 to_address: "recipient".to_string(),
                 amount: vec![Coin {
                     denom: "uluna".to_string(),
-                    amount: amount * denom_rate
+                    amount: amount * denom_rate,
                 }],
             })),
             SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
@@ -541,7 +649,7 @@ fn test_burn_tokens_when_all_rates_are_not_zero() {
             name: "gOHM reward token".to_string(),
             symbol: "rgOHM".to_string(),
             decimals: 6u8,
-            total_supply: mint_amount - amount
+            total_supply: mint_amount - amount,
         }
     );
 
@@ -587,7 +695,7 @@ fn test_burn_tokens_when_gohm_rate_is_zero() {
             to_address: "recipient".to_string(),
             amount: vec![Coin {
                 denom: "uluna".to_string(),
-                amount: amount * denom_rate
+                amount: amount * denom_rate,
             }],
         })),]
     );
@@ -600,7 +708,7 @@ fn test_burn_tokens_when_gohm_rate_is_zero() {
             name: "gOHM reward token".to_string(),
             symbol: "rgOHM".to_string(),
             decimals: 6u8,
-            total_supply: mint_amount - amount
+            total_supply: mint_amount - amount,
         }
     );
 
@@ -661,7 +769,7 @@ fn test_burn_tokens_when_denom_rate_is_zero() {
             name: "gOHM reward token".to_string(),
             symbol: "rgOHM".to_string(),
             decimals: 6u8,
-            total_supply: mint_amount - amount
+            total_supply: mint_amount - amount,
         }
     );
 
