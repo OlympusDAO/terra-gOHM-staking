@@ -407,7 +407,7 @@ fn test_burn_tokens_fails_if_no_balance() {
     assert_eq!(token_info.total_supply, Uint128::from(1000000u128));
 }
 
-#[test]
+// #[test]
 // fn test_burn_tokens_success_if_with_balance() {
 //     let mut deps = mock_dependencies(&[]);
 

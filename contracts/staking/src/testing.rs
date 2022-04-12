@@ -192,7 +192,7 @@ fn test_bond_tokens() {
     }
 }
 
-#[test]
+// #[test]
 // fn test_bond_tokens_fails_if_unauthorized() {
 //     let mut deps = mock_dependencies(&[]);
 
